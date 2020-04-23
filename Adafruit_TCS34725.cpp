@@ -119,14 +119,9 @@ void Adafruit_TCS34725::enable() {
   write8(TCS34725_ENABLE, TCS34725_ENABLE_PON);
   delay(3);
   write8(TCS34725_ENABLE, TCS34725_ENABLE_PON | TCS34725_ENABLE_AEN);
-  /* Set a delay for the integration time.
-    This is only necessary in the case where enabling and then
-    immediately trying to read values back. This is because setting
-    AEN triggers an automatic integration, so if a read RGBC is
-    performed too quickly, the data is not yet valid and all 0's are
-    returned */
-  /* 12/5 = 2.4, add 1 to account for integer truncation */
-  delay((256 - _tcs34725IntegrationTime) * 12 / 5 + 1);
+
+  /* Mark enable as start of integration time, so we don't read too soon */
+  _tcs34725SensorIntegrationStart = millis();
 }
 
 /*!
@@ -150,6 +145,7 @@ Adafruit_TCS34725::Adafruit_TCS34725(tcs34725IntegrationTime_t it,
                                      tcs34725Gain_t gain) {
   _tcs34725Initialised = false;
   _tcs34725IntegrationTime = it;
+  _tcs34725SensorIntegrationStart = 0;
   _tcs34725Gain = gain;
 }
 
@@ -264,14 +260,16 @@ void Adafruit_TCS34725::getRawData(uint16_t *r, uint16_t *g, uint16_t *b,
   if (!_tcs34725Initialised)
     begin();
 
+  /* Wait for integration to finish before reading data. */
+  /* This effectively makes this a blocking read until integration is done. */
+  while ((millis() - _tcs34725SensorIntegrationStart) < ((256 - _tcs34725IntegrationTime) * 12 / 5 + 1)) {}
+
   *c = read16(TCS34725_CDATAL);
   *r = read16(TCS34725_RDATAL);
   *g = read16(TCS34725_GDATAL);
   *b = read16(TCS34725_BDATAL);
 
-  /* Set a delay for the integration time */
-  /* 12/5 = 2.4, add 1 to account for integer truncation */
-  delay((256 - _tcs34725IntegrationTime) * 12 / 5 + 1);
+  _tcs34725SensorIntegrationStart = millis();
 }
 
 /*!

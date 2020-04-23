@@ -203,6 +203,7 @@ private:
   boolean _tcs34725Initialised;
   tcs34725Gain_t _tcs34725Gain;
   tcs34725IntegrationTime_t _tcs34725IntegrationTime;
+  unsigned long _tcs34725SensorIntegrationStart;
 };
 
 #endif
