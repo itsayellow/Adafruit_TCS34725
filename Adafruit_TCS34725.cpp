@@ -226,6 +226,9 @@ void Adafruit_TCS34725::setIntegrationTime(tcs34725IntegrationTime_t it) {
 
   /* Update value placeholders */
   _tcs34725IntegrationTime = it;
+
+  /* Restart Integration time to make sure we wait enough */
+  _tcs34725SensorIntegrationStart = millis();
 }
 
 /*!
