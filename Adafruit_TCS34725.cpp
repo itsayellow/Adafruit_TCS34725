@@ -121,8 +121,7 @@ void Adafruit_TCS34725::enable() {
   write8(TCS34725_ENABLE, TCS34725_ENABLE_PON | TCS34725_ENABLE_AEN);
 
   /* Mark enable as start of integration time, so we don't read too soon */
-  _tcs34725SensorValidTime =
-      millis() + (256 - _tcs34725IntegrationTime) * 12 / 5 + 1;
+  _tcs34725SensorValidTime = millis() + ATIME_TO_MS(_tcs34725IntegrationTime);
 }
 
 /*!
@@ -146,8 +145,7 @@ Adafruit_TCS34725::Adafruit_TCS34725(tcs34725IntegrationTime_t it,
                                      tcs34725Gain_t gain) {
   _tcs34725Initialised = false;
   _tcs34725IntegrationTime = it;
-  _tcs34725SensorValidTime =
-      millis() + (256 - _tcs34725IntegrationTime) * 12 / 5 + 1;
+  _tcs34725SensorValidTime = millis() + ATIME_TO_MS(_tcs34725IntegrationTime);
   _tcs34725Gain = gain;
 }
 
@@ -237,8 +235,8 @@ void Adafruit_TCS34725::setIntegrationTime(tcs34725IntegrationTime_t it) {
   /* Allow read after 2 full integration times: 1 old time and 1 new time.
      Delay long enough to empty 2 values from pipeline after changing
      integration time to ensure next read with new setting. */
-  _tcs34725SensorValidTime = millis() + (256 - oldIntegrationTime) * 12 / 5 +
-                             1 + (256 - _tcs34725IntegrationTime) * 12 / 5 + 1;
+  _tcs34725SensorValidTime = millis() + ATIME_TO_MS(oldIntegrationTime) +
+                             ATIME_TO_MS(_tcs34725IntegrationTime);
 }
 
 /*!
@@ -260,7 +258,7 @@ void Adafruit_TCS34725::setGain(tcs34725Gain_t gain) {
      Delay long enough to empty 2 values from pipeline after changing gain
      to ensure next read with new setting. */
   _tcs34725SensorValidTime =
-      millis() + 2 * ((256 - _tcs34725IntegrationTime) * 12 / 5 + 1);
+      millis() + 2 * ATIME_TO_MS(_tcs34725IntegrationTime);
 }
 
 /*!
@@ -290,8 +288,7 @@ void Adafruit_TCS34725::getRawData(uint16_t *r, uint16_t *g, uint16_t *b,
   *g = read16(TCS34725_GDATAL);
   *b = read16(TCS34725_BDATAL);
 
-  _tcs34725SensorValidTime =
-      millis() + (256 - _tcs34725IntegrationTime) * 12 / 5 + 1;
+  _tcs34725SensorValidTime = millis() + ATIME_TO_MS(_tcs34725IntegrationTime);
 }
 
 /*!

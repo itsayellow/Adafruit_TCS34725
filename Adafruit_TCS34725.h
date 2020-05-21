@@ -157,6 +157,9 @@ typedef enum {
       0x00 /**<  WRONG BUT INCLUDED FOR LEGACY CODE */
 } tcs34725IntegrationTime_t;
 
+#define ATIME_TO_MS(atime)                                                     \
+  ((256 - atime) * 12 / 5 + 1) /**< Convert ATIME to integ. time */
+
 /** Gain settings for TCS34725  */
 typedef enum {
   TCS34725_GAIN_1X = 0x00,  /**<  No gain  */
