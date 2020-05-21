@@ -151,7 +151,7 @@ typedef enum {
       0xD5, /**<  100.8ms - 42 cycles  - Max Count: 43008 */
   TCS34725_INTEGRATIONTIME_154MS =
       0xC0, /**<  153.6ms - 64 cycles  - Max Count: 65535 */
-  TCS34725_INTEGRATIONTIME_615MS =
+  TCS34725_INTEGRATIONTIME_614MS =
       0x00, /**<  614.4ms - 256 cycles - Max Count: 65535 */
   TCS34725_INTEGRATIONTIME_700MS =
       0x00 /**<  WRONG BUT INCLUDED FOR LEGACY CODE */
