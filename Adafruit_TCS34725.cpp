@@ -227,8 +227,8 @@ void Adafruit_TCS34725::setIntegrationTime(tcs34725IntegrationTime_t it) {
   /* Update value placeholders */
   _tcs34725IntegrationTime = it;
 
-  /* Delay long enough to empty 2 values from pipeline after changing gain
-     to ensure readback with new gain setting. */
+  /* Delay long enough to empty 2 values from pipeline after changing
+     integration time to ensure readback with new gain setting. */
   delay((256 - _tcs34725IntegrationTime) * 12 / 5 + 1);
   _tcs34725SensorIntegrationStart = millis();
 }
