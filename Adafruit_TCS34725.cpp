@@ -218,20 +218,25 @@ boolean Adafruit_TCS34725::init() {
  *          Integration Time
  */
 void Adafruit_TCS34725::setIntegrationTime(tcs34725IntegrationTime_t it) {
+  uint8_t oldIntegrationTime;
+
   if (!_tcs34725Initialised)
     begin();
 
   /* Update the timing register */
   write8(TCS34725_ATIME, it);
 
+  /* Save old integration time */
+  oldIntegrationTime = _tcs34725IntegrationTime;
+
   /* Update value placeholders */
   _tcs34725IntegrationTime = it;
 
-  /* Allow read after 2 full integration times.  Pretend we started 1
-     integration time in the future.
+  /* Allow read after 2 full integration times: 1 old time and 1 new time.
+     Pretend we started 1 old integration time in the future.
      Delay long enough to empty 2 values from pipeline after changing
-     integration time to ensure readback with new setting. */
-  _tcs34725SensorIntegrationStart = millis() + (256 - _tcs34725IntegrationTime) * 12 / 5 + 1;
+     integration time to ensure next read with new setting. */
+  _tcs34725SensorIntegrationStart = millis() + (256 - oldIntegrationTime) * 12 / 5 + 1;
 }
 
 /*!
@@ -252,7 +257,7 @@ void Adafruit_TCS34725::setGain(tcs34725Gain_t gain) {
   /* Allow read after 2 full integration times.  Pretend we started 1
      integration time in the future.
      Delay long enough to empty 2 values from pipeline after changing gain
-     to ensure readback with new setting. */
+     to ensure next read with new setting. */
   _tcs34725SensorIntegrationStart = millis() + (256 - _tcs34725IntegrationTime) * 12 / 5 + 1;
 }
 
