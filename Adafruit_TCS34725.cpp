@@ -236,7 +236,8 @@ void Adafruit_TCS34725::setIntegrationTime(tcs34725IntegrationTime_t it) {
      Pretend we started 1 old integration time in the future.
      Delay long enough to empty 2 values from pipeline after changing
      integration time to ensure next read with new setting. */
-  _tcs34725SensorIntegrationStart = millis() + (256 - oldIntegrationTime) * 12 / 5 + 1;
+  _tcs34725SensorIntegrationStart =
+      millis() + (256 - oldIntegrationTime) * 12 / 5 + 1;
 }
 
 /*!
@@ -258,7 +259,8 @@ void Adafruit_TCS34725::setGain(tcs34725Gain_t gain) {
      integration time in the future.
      Delay long enough to empty 2 values from pipeline after changing gain
      to ensure next read with new setting. */
-  _tcs34725SensorIntegrationStart = millis() + (256 - _tcs34725IntegrationTime) * 12 / 5 + 1;
+  _tcs34725SensorIntegrationStart =
+      millis() + (256 - _tcs34725IntegrationTime) * 12 / 5 + 1;
 }
 
 /*!
@@ -279,7 +281,8 @@ void Adafruit_TCS34725::getRawData(uint16_t *r, uint16_t *g, uint16_t *b,
 
   /* Wait for integration to finish before reading data. */
   /* This effectively makes this a blocking read until integration is done. */
-  while (millis() < _tcs34725SensorIntegrationStart + ((256 - _tcs34725IntegrationTime) * 12 / 5 + 1)) {
+  while (millis() < _tcs34725SensorIntegrationStart +
+                        ((256 - _tcs34725IntegrationTime) * 12 / 5 + 1)) {
     delay(1);
   }
 
