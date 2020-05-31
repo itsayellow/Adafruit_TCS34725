@@ -292,6 +292,30 @@ void Adafruit_TCS34725::getRawData(uint16_t *r, uint16_t *g, uint16_t *b,
 }
 
 /*!
+ *  @brief  Reads the raw red, green, blue and clear channel values
+ *  @param  *r
+ *          Red value
+ *  @param  *g
+ *          Green value
+ *  @param  *b
+ *          Blue value
+ *  @param  *c
+ *          Clear channel value
+ */
+void Adafruit_TCS34725::getRawDataNonblocking(uint16_t *r, uint16_t *g, uint16_t *b,
+                                   uint16_t *c) {
+  if (!_tcs34725Initialised)
+    begin();
+
+  *c = read16(TCS34725_CDATAL);
+  *r = read16(TCS34725_RDATAL);
+  *g = read16(TCS34725_GDATAL);
+  *b = read16(TCS34725_BDATAL);
+
+  _tcs34725SensorValidTime = millis() + ATIME_TO_MS(_tcs34725IntegrationTime);
+}
+
+/*!
  *  @brief  Reads the raw red, green, blue and clear channel values in
  *          one-shot mode (e.g., wakes from sleep, takes measurement, enters
  *          sleep)
