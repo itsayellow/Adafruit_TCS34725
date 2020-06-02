@@ -119,9 +119,6 @@ void Adafruit_TCS34725::enable() {
   write8(TCS34725_ENABLE, TCS34725_ENABLE_PON);
   delay(3);
   write8(TCS34725_ENABLE, TCS34725_ENABLE_PON | TCS34725_ENABLE_AEN);
-
-  /* Mark enable as start of integration time, so we don't read too soon */
-  _tcs34725SensorValidTime = millis() + ATIME_TO_MS(_tcs34725IntegrationTime);
 }
 
 /*!
@@ -145,7 +142,6 @@ Adafruit_TCS34725::Adafruit_TCS34725(uint8_t it,
                                      tcs34725Gain_t gain) {
   _tcs34725Initialised = false;
   _tcs34725IntegrationTime = it;
-  _tcs34725SensorValidTime = millis() + ATIME_TO_MS(_tcs34725IntegrationTime);
   _tcs34725Gain = gain;
   _tcs34725UsingHardwareInterrupts = false; // mirror reset state of AIEN
   _tcs34725DiscardNextData = false;
@@ -230,25 +226,16 @@ boolean Adafruit_TCS34725::init() {
  *          Integration Time
  */
 void Adafruit_TCS34725::setIntegrationTime(uint8_t it) {
-  uint8_t oldIntegrationTime;
-
   if (!_tcs34725Initialised)
     begin();
 
   /* Update the timing register */
   write8(TCS34725_ATIME, it);
 
-  /* Save old integration time */
-  oldIntegrationTime = _tcs34725IntegrationTime;
-
   /* Update value placeholders */
   _tcs34725IntegrationTime = it;
 
-  /* Allow read after 2 full integration times: 1 old time and 1 new time.
-     Delay long enough to empty 2 values from pipeline after changing
-     integration time to ensure next read with new setting. */
-  _tcs34725SensorValidTime = millis() + ATIME_TO_MS(oldIntegrationTime) +
-                             ATIME_TO_MS(_tcs34725IntegrationTime);
+  /* Discard next data because may be corrupted or old integration time (??) */
   _tcs34725DiscardNextData = true;
 }
 
@@ -267,11 +254,7 @@ void Adafruit_TCS34725::setGain(tcs34725Gain_t gain) {
   /* Update value placeholders */
   _tcs34725Gain = gain;
 
-  /* Allow read after 2 full integration times.
-     Delay long enough to empty 2 values from pipeline after changing gain
-     to ensure next read with new setting. */
-  _tcs34725SensorValidTime =
-      millis() + 2 * ATIME_TO_MS(_tcs34725IntegrationTime);
+  /* Discard next data because may be corrupted or old integration time (??) */
   _tcs34725DiscardNextData = true;
 }
 
@@ -292,21 +275,16 @@ void Adafruit_TCS34725::getRawData(uint16_t *r, uint16_t *g, uint16_t *b,
   if (!_tcs34725Initialised)
     begin();
 
-  /* Wait for integration to finish before reading data. */
-  /* This effectively makes this a blocking read until integration is done. */
-  /*
-  while (millis() < _tcs34725SensorValidTime) {
-    delay(1);
-  }
-  */
-  /* If no hardware interrupt, poll AINT to see next valid data */
-  while((read8(TCS34725_STATUS) && TCS34725_STATUS_AINT) == 0) {
+  /* Wait for integration to finish before reading data.
+     If no hardware interrupt, poll AINT to see next valid data
+   */
+  while((read8(TCS34725_STATUS) & TCS34725_STATUS_AINT) == 0) {
     delay(1);
   }
   if (_tcs34725DiscardNextData) {
     _tcs34725DiscardNextData = false;
     clearInterrupt();
-    while((read8(TCS34725_STATUS) && TCS34725_STATUS_AINT) == 0) {
+    while((read8(TCS34725_STATUS) & TCS34725_STATUS_AINT) == 0) {
       delay(1);
     }
   }
@@ -316,7 +294,6 @@ void Adafruit_TCS34725::getRawData(uint16_t *r, uint16_t *g, uint16_t *b,
   *g = read16(TCS34725_GDATAL);
   *b = read16(TCS34725_BDATAL);
 
-  /* _tcs34725SensorValidTime = millis() + ATIME_TO_MS(_tcs34725IntegrationTime); */
   clearInterrupt();
 }
 
@@ -341,8 +318,6 @@ void Adafruit_TCS34725::getRawDataNonblocking(uint16_t *r, uint16_t *g, uint16_t
   *r = read16(TCS34725_RDATAL);
   *g = read16(TCS34725_GDATAL);
   *b = read16(TCS34725_BDATAL);
-
-  _tcs34725SensorValidTime = millis() + ATIME_TO_MS(_tcs34725IntegrationTime);
 }
 
 /*!

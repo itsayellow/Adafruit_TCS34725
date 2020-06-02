@@ -233,7 +233,6 @@ private:
   boolean _tcs34725DiscardNextData;
   tcs34725Gain_t _tcs34725Gain;
   uint8_t _tcs34725IntegrationTime;
-  unsigned long _tcs34725SensorValidTime;
 };
 
 #endif
