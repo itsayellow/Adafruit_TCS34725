@@ -147,6 +147,8 @@ Adafruit_TCS34725::Adafruit_TCS34725(uint8_t it,
   _tcs34725IntegrationTime = it;
   _tcs34725SensorValidTime = millis() + ATIME_TO_MS(_tcs34725IntegrationTime);
   _tcs34725Gain = gain;
+  _tcs34725UsingHardwareInterrupts = false; // mirror reset state of AIEN
+  _tcs34725DiscardNextData = false;
 }
 
 /*!
@@ -206,6 +208,16 @@ boolean Adafruit_TCS34725::init() {
   setIntegrationTime(_tcs34725IntegrationTime);
   setGain(_tcs34725Gain);
 
+  /* If user is not controlling hardware interrupts:
+     Set persistence filter to generate an interrupt for every RGB Cycle,
+        regardless of the integration limits
+     Even though no hardware interrupt is being used, we can poll AINT bit to
+        see when valid RGBC values are ready.
+     */
+  if (!_tcs34725UsingHardwareInterrupts) {
+      write8(TCS34725_PERS, TCS34725_PERS_NONE);
+  }
+
   /* Note: by default, the device is in power down mode on bootup */
   enable();
 
@@ -237,6 +249,7 @@ void Adafruit_TCS34725::setIntegrationTime(uint8_t it) {
      integration time to ensure next read with new setting. */
   _tcs34725SensorValidTime = millis() + ATIME_TO_MS(oldIntegrationTime) +
                              ATIME_TO_MS(_tcs34725IntegrationTime);
+  _tcs34725DiscardNextData = true;
 }
 
 /*!
@@ -259,10 +272,12 @@ void Adafruit_TCS34725::setGain(tcs34725Gain_t gain) {
      to ensure next read with new setting. */
   _tcs34725SensorValidTime =
       millis() + 2 * ATIME_TO_MS(_tcs34725IntegrationTime);
+  _tcs34725DiscardNextData = true;
 }
 
 /*!
- *  @brief  Reads the raw red, green, blue and clear channel values
+ *  @brief  Reads the raw red, green, blue and clear channel values. Waits
+ *          until next valid data is ready before reading and returning.
  *  @param  *r
  *          Red value
  *  @param  *g
@@ -279,8 +294,21 @@ void Adafruit_TCS34725::getRawData(uint16_t *r, uint16_t *g, uint16_t *b,
 
   /* Wait for integration to finish before reading data. */
   /* This effectively makes this a blocking read until integration is done. */
+  /*
   while (millis() < _tcs34725SensorValidTime) {
     delay(1);
+  }
+  */
+  /* If no hardware interrupt, poll AINT to see next valid data */
+  while((read8(TCS34725_STATUS) && TCS34725_STATUS_AINT) == 0) {
+    delay(1);
+  }
+  if (_tcs34725DiscardNextData) {
+    _tcs34725DiscardNextData = false;
+    clearInterrupt();
+    while((read8(TCS34725_STATUS) && TCS34725_STATUS_AINT) == 0) {
+      delay(1);
+    }
   }
 
   *c = read16(TCS34725_CDATAL);
@@ -288,11 +316,13 @@ void Adafruit_TCS34725::getRawData(uint16_t *r, uint16_t *g, uint16_t *b,
   *g = read16(TCS34725_GDATAL);
   *b = read16(TCS34725_BDATAL);
 
-  _tcs34725SensorValidTime = millis() + ATIME_TO_MS(_tcs34725IntegrationTime);
+  /* _tcs34725SensorValidTime = millis() + ATIME_TO_MS(_tcs34725IntegrationTime); */
+  clearInterrupt();
 }
 
 /*!
- *  @brief  Reads the raw red, green, blue and clear channel values
+ *  @brief  Reads the raw red, green, blue and clear channel values immediately
+ *          without waiting until next data is ready.
  *  @param  *r
  *          Red value
  *  @param  *g
@@ -471,7 +501,7 @@ uint16_t Adafruit_TCS34725::calculateColorTemperature_dn40(uint16_t r,
    */
   if ((256 - _tcs34725IntegrationTime) <= 63) {
     /* Adjust sat to 75% to avoid analog saturation if atime < 153.6ms */
-    sat -= sat / 4;
+   sat -= sat / 4;
   }
 
   /* Check for saturation and mark the sample as invalid if true */
@@ -521,11 +551,12 @@ uint16_t Adafruit_TCS34725::calculateLux(uint16_t r, uint16_t g, uint16_t b) {
 }
 
 /*!
- *  @brief  Sets inerrupt for TCS34725
+ *  @brief  Sets interrupt for TCS34725
  *  @param  i
  *          Interrupt (True/False)
  */
 void Adafruit_TCS34725::setInterrupt(boolean i) {
+  _tcs34725UsingHardwareInterrupts = i;
   uint8_t r = read8(TCS34725_ENABLE);
   if (i) {
     r |= TCS34725_ENABLE_AIEN;
@@ -536,7 +567,7 @@ void Adafruit_TCS34725::setInterrupt(boolean i) {
 }
 
 /*!
- *  @brief  Clears inerrupt for TCS34725
+ *  @brief  Clears interrupt for TCS34725
  */
 void Adafruit_TCS34725::clearInterrupt() {
   _wire->beginTransmission(_i2caddr);
@@ -549,7 +580,7 @@ void Adafruit_TCS34725::clearInterrupt() {
 }
 
 /*!
- *  @brief  Sets inerrupt limits
+ *  @brief  Sets interrupt limits
  *  @param  low
  *          Low limit
  *  @param  high

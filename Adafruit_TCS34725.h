@@ -229,6 +229,8 @@ private:
   TwoWire *_wire;
   uint8_t _i2caddr;
   boolean _tcs34725Initialised;
+  boolean _tcs34725UsingHardwareInterrupts;
+  boolean _tcs34725DiscardNextData;
   tcs34725Gain_t _tcs34725Gain;
   uint8_t _tcs34725IntegrationTime;
   unsigned long _tcs34725SensorValidTime;
