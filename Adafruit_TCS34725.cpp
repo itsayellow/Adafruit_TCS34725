@@ -278,6 +278,7 @@ void Adafruit_TCS34725::getRawData(uint16_t *r, uint16_t *g, uint16_t *b,
   /* Wait for integration to finish before reading data.
      If no hardware interrupt, poll AINT to see next valid data
    */
+  // read8(TCS34725_STATUS) takes 450us-475us
   while((read8(TCS34725_STATUS) & TCS34725_STATUS_AINT) == 0) {
     delay(1);
   }
