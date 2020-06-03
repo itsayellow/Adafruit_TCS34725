@@ -43,6 +43,13 @@ float powf(const float x, const float y) {
   return (float)(pow((double)x, (double)y));
 }
 
+volatile boolean tcs34725_data_ready = false;
+
+/*!
+ *  @brief  Interrupt Service Routine for sensor hardware interrupt.
+ */
+void tcsIsr() { tcs34725_data_ready = true; }
+
 /*!
  *  @brief  Writes a register and an 8 bit value over I2C
  *  @param  reg
@@ -141,12 +148,13 @@ void Adafruit_TCS34725::disable() {
  *  @param  gain
  *          Gain
  */
-Adafruit_TCS34725::Adafruit_TCS34725(uint8_t it,
-                                     tcs34725Gain_t gain) {
+Adafruit_TCS34725::Adafruit_TCS34725(uint8_t it, tcs34725Gain_t gain) {
   _tcs34725Initialised = false;
   _tcs34725IntegrationTime = it;
   _tcs34725SensorValidTime = millis() + ATIME_TO_MS(_tcs34725IntegrationTime);
   _tcs34725Gain = gain;
+  _tcs34725UseHwInterrupts = false;
+  _tcs34725DiscardNextData = false;
 }
 
 /*!
@@ -213,6 +221,17 @@ boolean Adafruit_TCS34725::init() {
 }
 
 /*!
+ *  @brief  Use hardware interrupts.  Run in setup() after begin()
+ *  @param  interruptPin
+ *          Digital pin to use as interrupt source.
+ */
+void Adafruit_TCS34725::useHardwareInterrupts(int interruptPin) {
+  pinMode(interruptPin, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(interruptPin), tcsIsr, FALLING);
+  _tcs34725UseHwInterrupts = true;
+}
+
+/*!
  *  @brief  Sets the integration time for the TC34725
  *  @param  it
  *          Integration Time
@@ -232,11 +251,15 @@ void Adafruit_TCS34725::setIntegrationTime(uint8_t it) {
   /* Update value placeholders */
   _tcs34725IntegrationTime = it;
 
-  /* Allow read after 2 full integration times: 1 old time and 1 new time.
-     Delay long enough to empty 2 values from pipeline after changing
-     integration time to ensure next read with new setting. */
-  _tcs34725SensorValidTime = millis() + ATIME_TO_MS(oldIntegrationTime) +
-                             ATIME_TO_MS(_tcs34725IntegrationTime);
+  if (_tcs34725UseHwInterrupts) {
+    _tcs34725DiscardNextData = true;
+  } else {
+    /* Allow read after 2 full integration times: 1 old time and 1 new time.
+       Delay long enough to empty 2 values from pipeline after changing
+       integration time to ensure next read with new setting. */
+    _tcs34725SensorValidTime = millis() + ATIME_TO_MS(oldIntegrationTime) +
+                               ATIME_TO_MS(_tcs34725IntegrationTime);
+  }
 }
 
 /*!
@@ -254,11 +277,15 @@ void Adafruit_TCS34725::setGain(tcs34725Gain_t gain) {
   /* Update value placeholders */
   _tcs34725Gain = gain;
 
-  /* Allow read after 2 full integration times.
-     Delay long enough to empty 2 values from pipeline after changing gain
-     to ensure next read with new setting. */
-  _tcs34725SensorValidTime =
-      millis() + 2 * ATIME_TO_MS(_tcs34725IntegrationTime);
+  if (_tcs34725UseHwInterrupts) {
+    _tcs34725DiscardNextData = true;
+  } else {
+    /* Allow read after 2 full integration times.
+       Delay long enough to empty 2 values from pipeline after changing gain
+       to ensure next read with new setting. */
+    _tcs34725SensorValidTime =
+        millis() + 2 * ATIME_TO_MS(_tcs34725IntegrationTime);
+  }
 }
 
 /*!
@@ -279,8 +306,17 @@ void Adafruit_TCS34725::getRawData(uint16_t *r, uint16_t *g, uint16_t *b,
 
   /* Wait for integration to finish before reading data. */
   /* This effectively makes this a blocking read until integration is done. */
-  while (millis() < _tcs34725SensorValidTime) {
-    delay(1);
+  if (_tcs34725UseHwInterrupts) {
+    for (int i = 0; i++; i < _tcs34725DiscardNextData ? 2 : 1) {
+      while (!tcs34725_data_ready) {
+      }
+      clearInterrupt();
+      tcs34725_data_ready = false;
+    }
+    _tcs34725DiscardNextData = false;
+  } else {
+    while (millis() < _tcs34725SensorValidTime) {
+    }
   }
 
   *c = read16(TCS34725_CDATAL);
@@ -302,8 +338,8 @@ void Adafruit_TCS34725::getRawData(uint16_t *r, uint16_t *g, uint16_t *b,
  *  @param  *c
  *          Clear channel value
  */
-void Adafruit_TCS34725::getRawDataNonblocking(uint16_t *r, uint16_t *g, uint16_t *b,
-                                   uint16_t *c) {
+void Adafruit_TCS34725::getRawDataNonblocking(uint16_t *r, uint16_t *g,
+                                              uint16_t *b, uint16_t *c) {
   if (!_tcs34725Initialised)
     begin();
 
