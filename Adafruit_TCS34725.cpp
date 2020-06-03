@@ -228,6 +228,12 @@ boolean Adafruit_TCS34725::init() {
 void Adafruit_TCS34725::useHardwareInterrupts(int interruptPin) {
   pinMode(interruptPin, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(interruptPin), tcsIsr, FALLING);
+
+  // Set persistence filter to generate an interrupt for every RGB Cycle,
+  //    regardless of the integration limits
+  write8(TCS34725_PERS, TCS34725_PERS_NONE);
+  setInterrupt(true);
+
   _tcs34725UseHwInterrupts = true;
 }
 
