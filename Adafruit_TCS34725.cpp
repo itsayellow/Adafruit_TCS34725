@@ -226,6 +226,8 @@ boolean Adafruit_TCS34725::init() {
  *          Digital pin to use as interrupt source.
  */
 void Adafruit_TCS34725::useHardwareInterrupts(int interruptPin) {
+  // Configure pin to receive hardware interrupt from Sensor INT pin
+  // TCS interrupt output is Active-LOW and Open-Drain
   pinMode(interruptPin, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(interruptPin), tcsIsr, FALLING);
 
@@ -313,7 +315,8 @@ void Adafruit_TCS34725::getRawData(uint16_t *r, uint16_t *g, uint16_t *b,
   /* Wait for integration to finish before reading data. */
   /* This effectively makes this a blocking read until integration is done. */
   if (_tcs34725UseHwInterrupts) {
-    for (int i = 0; i++; i < _tcs34725DiscardNextData ? 2 : 1) {
+    // if DiscardNextData loop twice through wait for interrupt
+    for (int i = 0; i < (_tcs34725DiscardNextData ? 2 : 1); i++) {
       while (!tcs34725_data_ready) {
       }
       clearInterrupt();
