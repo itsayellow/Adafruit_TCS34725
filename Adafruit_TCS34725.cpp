@@ -43,6 +43,9 @@ float powf(const float x, const float y) {
   return (float)(pow((double)x, (double)y));
 }
 
+/*!
+ *  @brief  Data Ready status flag for interrupt routine
+ */
 volatile boolean tcs34725_data_ready = false;
 
 /*!
@@ -221,7 +224,9 @@ boolean Adafruit_TCS34725::init() {
 }
 
 /*!
- *  @brief  Use hardware interrupts.  Run in setup() after begin()
+ *  @brief  Directs this library to use hardware interrupts.
+ *          Run in setup() after begin()
+ *          Connect TCS34725 INT pin to Arduino pin
  *  @param  interruptPin
  *          Digital pin to use as interrupt source.
  */
@@ -566,7 +571,7 @@ uint16_t Adafruit_TCS34725::calculateLux(uint16_t r, uint16_t g, uint16_t b) {
 }
 
 /*!
- *  @brief  Sets inerrupt for TCS34725
+ *  @brief  Sets interrupt for TCS34725
  *  @param  i
  *          Interrupt (True/False)
  */
@@ -581,7 +586,7 @@ void Adafruit_TCS34725::setInterrupt(boolean i) {
 }
 
 /*!
- *  @brief  Clears inerrupt for TCS34725
+ *  @brief  Clears interrupt for TCS34725
  */
 void Adafruit_TCS34725::clearInterrupt() {
   _wire->beginTransmission(_i2caddr);
@@ -594,7 +599,7 @@ void Adafruit_TCS34725::clearInterrupt() {
 }
 
 /*!
- *  @brief  Sets inerrupt limits
+ *  @brief  Sets interrupt limits
  *  @param  low
  *          Low limit
  *  @param  high
